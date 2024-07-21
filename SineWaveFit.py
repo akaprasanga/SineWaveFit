@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.signal import find_peaks
 
 class SineWaveFit():
 
-    def __init__(self, x_data, y_data, learning_rate=0.01, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-8,iterations = 10000, patience = 500) -> None:
+    def __init__(self, x_data, y_data, learning_rate=0.01, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-8,iterations = 10000, patience = 500, amp_init=0, freq_init=0, phase_init=0, vertical_shift_init=0) -> None:
         self.X = x_data
         self.Y = y_data
         self.learning_rate = learning_rate
@@ -12,6 +13,10 @@ class SineWaveFit():
         self.epsilon = epsilon
         self.iterations = iterations
         self.patience = patience
+        self.amp_init = amp_init
+        self.freq_init = freq_init
+        self.phase_init = phase_init
+        self.vertical_shift_init = vertical_shift_init
 
 
     # Loss function: Mean Squared Error
@@ -30,6 +35,12 @@ class SineWaveFit():
         freq = np.random.randn()
         phase = np.random.randn()
         vertical_shift = np.random.randn()
+
+                # Initial parameters
+        # amp = self.amp_init
+        # freq = self.freq_init
+        # phase = self.phase_init
+        # vertical_shift = self.vertical_shift_init
 
         # Initialize Adam optimizer variables
         mAmp, mFreq, mPhase, mVert = 0, 0, 0, 0
@@ -94,7 +105,7 @@ class SineWaveFit():
                 patience_counter += 1
                 
             if patience_counter >= self.patience:
-                print(f"Early stopping at iteration {i}")
+                print(f"Early stopping at iteration {i} with best loss {loss}")
                 break
             
             # Print the loss every 100 iterations
@@ -109,7 +120,23 @@ if __name__ == "__main__":
     x_data = np.linspace(0, 2 * np.pi, 100)
     y_true = 3 * np.sin(2 * x_data + 1) + 0.5 + np.random.normal(scale=1.5, size=x_data.shape)
 
-    sineObj = SineWaveFit(x_data=x_data, y_data=y_true)
+    vertical_shift_initial = 0  # Initial guess for vertical shift D
+    amp_initial = (np.max(y_true) - np.min(y_true)) / 2  # Initial guess for amplitude A
+
+    # Rough initial guess for frequency f
+    # Assuming the dataset has roughly one complete cycle
+# Identify peaks to estimate the frequency
+    peaks, _ = find_peaks(y_true)
+    if len(peaks) > 1:
+        peak_distances = np.diff(x_data[peaks])
+        period_estimate = np.mean(peak_distances)
+        freq_initial = 1 / period_estimate
+    else:
+        freq_initial = 1 / (2 * np.pi)  # Default to one complete cycle over the range
+
+    phase_initial = 0  # Initial guess for phase shift C
+
+    sineObj = SineWaveFit(x_data=x_data, y_data=y_true, amp_init=amp_initial, freq_init=freq_initial, phase_init=phase_initial, vertical_shift_init=vertical_shift_initial)
     fitted_parms = sineObj.fit()
     # Plot the results
     plt.scatter(x_data, y_true, label='Actual Data')
